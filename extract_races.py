@@ -1,13 +1,11 @@
 # Standard library imports
 import csv
-import datetime
+import os
 import re
 import sys
-import os
 
 # Third-party imports
 import pdfplumber
-
 
 # Constants
 VALID_SURFACES = ["Dirt", "Turf", "All Weather", "Tapeta"]
@@ -46,18 +44,18 @@ def parse_distance_surface(text):
     if match:
         distance = match.group(1).strip()
         surface_raw = match.group(2).strip()
-        
+
         # Identify surface type
         surface = "Unknown"
         for vs in VALID_SURFACES:
             if vs.lower() in surface_raw.lower():
                 surface = vs
                 break
-        
+
         # Clean up distance (add spaces between capitalized words)
         if " " not in distance and len(distance) > 3:
             distance = re.sub(r'(?<!^)(?=[A-Z])', ' ', distance)
-             
+
         return distance, surface
     return None, None
 
@@ -89,31 +87,31 @@ def parse_trainers_footer(text):
                 trainer = m.group(2).strip()
                 if trainer.endswith('.'):
                     trainer = trainer[:-1]
-                
+
                 # Format name: Ensure space after comma if missing
                 if ',' in trainer and ', ' not in trainer:
                     trainer = trainer.replace(',', ', ')
-                
+
                 # Handle CamelCase in trainer name (e.g. BarreraIII -> Barrera III)
                 # Also "Bond, H.James" -> "Bond, H. James"
-                
+
                 # CamelCase split
                 trainer_orig = trainer
-                
+
                 # Avoid splitting DeXxxx, McXxxx, MacXxxx, O'Xxxx
                 # Use negative lookbehind?
                 # (?<!\bDe)(?<!\bMc)(?<!\bMac)(?<!\bO')(?<=[a-z])(?=[A-Z])
                 # But "De" might be start of string.
                 # Let's try a simpler approach: Split, then fix if it was De/Mc/Mac.
-                
+
                 trainer = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', trainer)
-                
+
                 # Fix De Lauro -> DeLauro, Mc Cormack -> McCormack, etc.
                 trainer = re.sub(r'\b(De|Mc|Mac|O)\s+([A-Z])', r'\1\2', trainer)
-                
+
                 # Space after period if followed by uppercase
                 trainer = re.sub(r'\.(?=[A-Z])', '. ', trainer)
-                    
+
                 trainer_map[pgm] = trainer
     return trainer_map
 
@@ -128,7 +126,7 @@ def extract_jockey_and_horse(text):
     """
     if not text.endswith(')'):
         return None, None
-        
+
     # Find the matching opening parenthesis for the last closing parenthesis
     balance = 0
     open_idx = -1
@@ -141,24 +139,24 @@ def extract_jockey_and_horse(text):
             if balance == 0:
                 open_idx = i
                 break
-    
+
     if open_idx != -1:
         jockey = text[open_idx+1:-1].strip()
         horse = text[:open_idx].strip()
-        
+
         # Format jockey name: Ensure space after comma if missing
         if ',' in jockey and ', ' not in jockey:
             jockey = jockey.replace(',', ', ')
-            
+
         # Handle CamelCase in jockey name (e.g. RodriguezCastro -> Rodriguez Castro)
         jockey = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', jockey)
-        
+
         # Ensure space before '(' if missing
         if '(' in jockey and ' (' not in jockey:
             jockey = jockey.replace('(', ' (')
-            
+
         return horse, jockey
-        
+
     return None, None
 
 
@@ -175,15 +173,15 @@ def parse_horse_row(line):
     line = line.strip()
     if not line:
         return None
-        
+
     # Filter out wager lines
     if line.startswith('$') or "Pick" in line or "Double" in line or "Exacta" in line:
         return None
-    
+
     parts = line.split()
     if not parts:
         return None
-    
+
     # Find PGM: First token that looks like a PGM (digits, optionally followed by letters)
     # e.g. "1", "1A", "10"
     pgm = None
@@ -202,10 +200,10 @@ def parse_horse_row(line):
                 pgm = part
                 pgm_idx = i
                 break
-    
+
     if not pgm:
         return None
-        
+
     # Safer: Look for the token immediately following PGM?
     # If PGM is index 0, check index 1.
     if len(parts) > pgm_idx + 1:
@@ -214,7 +212,7 @@ def parse_horse_row(line):
             horse, jockey = extract_jockey_and_horse(candidate)
             if horse and jockey and ',' in jockey:
                 return {"pgm": pgm, "jockey": jockey}
-                
+
     # Fallback: Scan all tokens for one that looks like Horse(Jockey)
     for part in parts[pgm_idx+1:]:
         if '(' in part and part.endswith(')'):
@@ -255,22 +253,22 @@ def extract_race_data(pdf_path):
         list: List of dictionaries containing race data
     """
     all_races = []
-    
+
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
             text = page.extract_text(layout=True)
             if not text:
                 continue
-            
+
             # Parse header information
             track, date_str, race_num = parse_header(text)
             if not track:
                 continue
-            
+
             date = format_date(date_str)
             distance, surface = parse_distance_surface(text)
             trainer_map = parse_trainers_footer(text)
-            
+
             # Collect horse rows
             horse_rows = []
             lines = text.split('\n')
@@ -278,16 +276,16 @@ def extract_race_data(pdf_path):
                 row_data = parse_horse_row(line)
                 if row_data:
                     horse_rows.append(row_data)
-            
+
             # Process collected rows (assume sorted by finish position)
             for i, row in enumerate(horse_rows):
                 rank = i + 1
                 win = 1 if rank == 1 else 0
                 place = 1 if rank == 2 else 0
                 show = 1 if rank == 3 else 0
-                
+
                 trainer = trainer_map.get(row["pgm"], "")
-                
+
                 all_races.append({
                     "Date": date,
                     "Race #": race_num,
@@ -323,12 +321,12 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python extract_races.py <file_digest_name>")
         sys.exit(1)
-    
-    
+
+
     file_digest_name = sys.argv[1]
     pdf_path = os.path.join(INPUT_PATH, file_digest_name)
     output_path = os.path.join(OUTPUT_PATH, file_digest_name.replace(".pdf", ".csv"))
-    
+
     data = extract_race_data(pdf_path)
     save_to_csv(data, output_path)
     print(f"Extracted {len(data)} rows to {output_path}")

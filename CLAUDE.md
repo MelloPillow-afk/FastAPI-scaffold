@@ -106,7 +106,7 @@ app/database/jobs.py - Contains functions like insert_job(), get_job_by_id(), up
 app/database/storage.py - Contains upload_pdf(), download_pdf(), upload_csv(), etc.
 
 
-python version: 3.13.9
+python version: 3.13.5
 
 Setup dependencies:
 fastapi - web framework
@@ -120,12 +120,7 @@ celery
 
 ## Implementation Checklist
 
-### Phase 1: Project Scaffold
-- [ ] Create project structure (app/, tests/ directories)
-- [ ] Create requirements.txt with all dependencies
-- [ ] Create .env.example with required environment variables
-- [ ] Setup app/__init__.py and app/main.py (basic FastAPI app)
-- [ ] Create app/config.py for environment configuration
+### Phase 1: Project Scaffold [✅]
 
 ### Phase 2: Database Layer
 - [ ] Create app/database/client.py (Supabase client singleton)
