@@ -1,12 +1,11 @@
-.PHONY: help install dev run worker test clean lint format
+.PHONY: help install dev run test clean lint format env
 
 help:
-	@echo "Horse Race API - Available Commands:"
+	@echo "Dora API - Available Commands:"
 	@echo ""
 	@echo "  make install    - Install dependencies"
 	@echo "  make dev        - Run development server with auto-reload"
 	@echo "  make run        - Run production server"
-	@echo "  make worker     - Run Celery worker"
 	@echo "  make test       - Run tests"
 	@echo "  make test-cov   - Run tests with coverage"
 	@echo "  make lint       - Run linters (ruff)"
@@ -15,26 +14,26 @@ help:
 	@echo "  make env        - Create .env file from example"
 	@echo ""
 
+install:
+	uv sync
+
 dev:
-	uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+	uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 run:
-	python -m app.main
-
-worker:
-	celery -A app.workers.pdf_processor worker --loglevel=info
+	uv run python -m app.main
 
 test:
-	pytest
+	uv run pytest
 
 test-cov:
-	pytest --cov=app tests/ --cov-report=term-missing
+	uv run pytest --cov=app tests/ --cov-report=term-missing
 
 lint:
-	ruff check app/
+	uv run ruff check app/
 
 format:
-	ruff format app/ tests/
+	uv run ruff format app/ tests/
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
