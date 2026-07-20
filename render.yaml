@@ -1,0 +1,33 @@
+# Render Blueprint — https://dashboard.render.com → New → Blueprint
+# After first deploy, set secrets prompted by sync: false (Supabase, Aquifer, CORS).
+
+services:
+  - type: web
+    name: dora-api
+    runtime: python
+    plan: free
+    region: oregon
+    autoDeployTrigger: commit
+    buildCommand: uv sync --frozen --no-dev
+    startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.5"
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: CORS_ORIGINS
+        sync: false
+      - fromGroup: dora-api-shared
+
+envVarGroups:
+  - name: dora-api-shared
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: AQUIFER_API_KEY
+        sync: false

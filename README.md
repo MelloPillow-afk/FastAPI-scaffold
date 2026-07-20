@@ -1,6 +1,6 @@
-# FastAPI Scaffold with Background Processing
+# Dora API
 
-A production-ready FastAPI scaffold for building applications with asynchronous background job processing, file storage, and real-time status polling.
+A FastAPI service that returns Aquifer biblical content related to highlighted text in the Bible app.
 
 ## Architecture Overview
 
@@ -9,7 +9,6 @@ A production-ready FastAPI scaffold for building applications with asynchronous 
 - **Backend**: FastAPI + Uvicorn
 - **Database**: Supabase Postgres
 - **Storage**: Supabase Storage
-- **Background Tasks**: Celery (async job processing)
 - **Package Management**: uv
 
 ## Project Structure
@@ -25,11 +24,8 @@ A production-ready FastAPI scaffold for building applications with asynchronous 
 │   │   └── __init__.py
 │   ├── handlers/            # API endpoint handlers (business logic)
 │   │   ├── __init__.py
-│   │   ├── health.py        # Health check endpoint
-│   │   └── jobs.py          # Job CRUD endpoints
-│   ├── database/            # Database & storage operations
-│   │   └── __init__.py
-│   └── workers/             # Celery background tasks
+│   │   └── health.py        # Health check endpoint
+│   └── database/            # Database & storage operations
 │       └── __init__.py
 ├── tests/
 │   ├── __init__.py
@@ -38,6 +34,8 @@ A production-ready FastAPI scaffold for building applications with asynchronous 
 │   └── integration/         # Integration tests
 │       └── __init__.py
 ├── .env.example             # Environment variable template
+├── .python-version          # Python version for local + Render
+├── render.yaml              # Render Blueprint (web service)
 ├── pyproject.toml           # Project dependencies
 ├── uv.lock                  # Locked dependencies
 ├── Makefile                 # Common development commands
@@ -74,11 +72,6 @@ Start the FastAPI server:
 uv run uvicorn app.main:app --reload
 ```
 
-Start the Celery worker (in a separate terminal):
-```bash
-uv run celery -A app.workers worker --loglevel=info
-```
-
 Access the API documentation at: `http://localhost:8000/docs`
 
 #### Using Make Commands
@@ -86,9 +79,31 @@ Access the API documentation at: `http://localhost:8000/docs`
 ```bash
 make install    # Install dependencies
 make dev        # Run development server
-make worker     # Run Celery worker
 make test       # Run tests
 ```
+
+## Deploy to Render
+
+This repo includes a [Render Blueprint](https://render.com/docs/blueprint-spec) in `render.yaml` that provisions:
+
+| Service | Type | Purpose |
+|---------|------|---------|
+| `dora-api` | Web | FastAPI (`uvicorn`) |
+
+### Steps
+
+1. Push this repo to GitHub/GitLab.
+2. In the [Render Dashboard](https://dashboard.render.com) → **Blueprints** → **New Blueprint Instance**.
+3. Connect the repository (Render reads `render.yaml`).
+4. When prompted, set:
+   - `SUPABASE_URL` — your Supabase project URL
+   - `SUPABASE_KEY` — service role or anon key (match what the app expects)
+   - `AQUIFER_API_KEY` — your Aquifer API key
+   - `CORS_ORIGINS` — your Vercel frontend origin(s), comma-separated (e.g. `https://your-app.vercel.app`)
+5. Deploy. The API will be at `https://dora-api.onrender.com` (or the URL Render assigns).
+6. Confirm `GET /health` returns `{"status":"healthy"}`.
+
+Python is pinned to **3.13.5** via `PYTHON_VERSION` and `.python-version`. Builds use `uv sync --frozen --no-dev`.
 
 ## API Endpoints
 
@@ -97,4 +112,3 @@ make test       # Run tests
 GET /health
 Returns: { "status": "healthy" }
 ```
-
